@@ -70,7 +70,7 @@ export default function DashboardPage() {
       {/* Switching Btn */}
       <DarkModeToggle darkMode={darkMode} onToggle={() => setDarkMode(!darkMode)} />
 
-      <div className="_main_layout">
+      <div className="_main_layout ">
         {/* Navbar */}
         <Navbar />
 
