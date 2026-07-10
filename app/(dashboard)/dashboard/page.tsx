@@ -65,59 +65,51 @@ const samplePosts = [
 export default function DashboardPage() {
   const [darkMode, setDarkMode] = useState(false);
 
-  const wrapperBg = darkMode ? "bg-[#0d0d1a]" : "bg-[#F0F2F5]";
-
   return (
-    <div className={`h-screen w-full overflow-hidden font-[Poppins,sans-serif] ${wrapperBg} flex flex-col transition-colors duration-300`}>
+    <div className={`_layout _layout_main_wrapper ${darkMode ? '_dark_wrapper' : ''}`}>
       {/* Switching Btn */}
       <DarkModeToggle darkMode={darkMode} onToggle={() => setDarkMode(!darkMode)} />
 
-      {/* Navbar */}
-      <Navbar />
+      <div className="_main_layout">
+        {/* Navbar */}
+        <Navbar />
 
-      {/* Main Content Area */}
-      <div className="w-full max-w-[1320px] mx-auto px-4 flex-1 overflow-hidden" style={{ paddingTop: "70px" }}>
-        <div className="flex flex-wrap -mx-4 h-full">
-          {/* Left Sidebar column - scrolls independently on desktop */}
-          <div className="w-full lg:w-1/4 px-4 hidden lg:block h-full">
-            <div
-              className="flex flex-col pt-[18px] overflow-y-auto"
-              style={{ height: "calc(100vh - 75px)" }}
-            >
-              <LeftSidebar darkMode={darkMode} />
-            </div>
-          </div>
+        {/* Main Layout Structure */}
+        <div className="container _custom_container">
+          <div className="_layout_inner_wrap">
+            <div className="row">
+              {/* Left Sidebar */}
+              <div className="col-xl-3 col-lg-3 col-md-12 col-sm-12">
+                <div className="_layout_left_sidebar_wrap">
+                  <LeftSidebar />
+                </div>
+              </div>
 
-          {/* Middle Column - scrolls independently */}
-          <div className="w-full lg:w-1/2 px-4 h-full">
-            <div
-              className="flex flex-col pt-2.5 overflow-y-auto no-scrollbar"
-              style={{
-                height: "calc(100vh - 75px)",
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-              }}
-            >
-              {/* Stories */}
-              <StoryCard darkMode={darkMode} />
+              {/* Middle */}
+              <div className="col-xl-6 col-lg-6 col-md-12 col-sm-12">
+                <div className="_layout_middle_wrap">
+                  <div className="_layout_middle_inner">
+                    <StoryCard darkMode={darkMode} />
 
-              {/* Create Post */}
-              <CreatePost darkMode={darkMode} />
+                    <div className="_feed_inner_area">
+                      <CreatePost darkMode={darkMode} />
+                    </div>
 
-              {/* Feed List */}
-              {samplePosts.map((post) => (
-                <PostCard key={post.id} darkMode={darkMode} post={post} />
-              ))}
-            </div>
-          </div>
+                    {samplePosts.map((post) => (
+                      <div key={post.id} className="_feed_inner_area">
+                        <PostCard darkMode={darkMode} post={post} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
-          {/* Right Sidebar column - scrolls independently on desktop */}
-          <div className="w-full lg:w-1/4 px-4 hidden lg:block h-full">
-            <div
-              className="flex flex-col pt-[18px] overflow-y-auto"
-              style={{ height: "calc(100vh - 75px)" }}
-            >
-              <RightSidebar darkMode={darkMode} />
+              {/* Right Sidebar */}
+              <div className="col-xl-3 col-lg-3 col-md-12 col-sm-12">
+                <div className="_layout_right_sidebar_wrap">
+                  <RightSidebar />
+                </div>
+              </div>
             </div>
           </div>
         </div>
