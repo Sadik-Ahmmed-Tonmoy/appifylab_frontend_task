@@ -44,7 +44,7 @@ export default function Navbar({ userName = "Dylan Field" }: NavbarProps) {
             <span className="navbar-toggler-icon"></span>
           </button>
           <div className="collapse navbar-collapse" id="navbarSupportedContent">
-            <div className="_header_form ms-auto">
+            <div className="_header_form ms-auto"> 
               <form className="_header_form_grp" onSubmit={(e) => e.preventDefault()}>
                 <svg className="_header_form_svg" xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="none" viewBox="0 0 17 17">
                   <circle cx="7" cy="7" r="6" stroke="#666" />
