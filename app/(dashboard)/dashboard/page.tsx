@@ -91,14 +91,10 @@ export default function DashboardPage() {
                   <div className="_layout_middle_inner">
                     <StoryCard darkMode={darkMode} />
 
-                    <div className="_feed_inner_area">
-                      <CreatePost darkMode={darkMode} />
-                    </div>
+                    <CreatePost darkMode={darkMode} />
 
                     {samplePosts.map((post) => (
-                      <div key={post.id} className="_feed_inner_area">
-                        <PostCard darkMode={darkMode} post={post} />
-                      </div>
+                      <PostCard key={post.id} darkMode={darkMode} post={post} />
                     ))}
                   </div>
                 </div>
