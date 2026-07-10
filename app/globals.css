@@ -1,0 +1,183 @@
+/* 1. Core Imports & Plugins */
+@import "tailwindcss";
+@plugin "../node_modules/tailwindcss-animate";
+
+/* 2. Enable Class-Based Dark Mode */
+@variant dark (&:where(.dark, .dark *));
+
+/* 3. System Design Tokens (CSS Variables) */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+
+  --card: #ffffff;
+  --card-foreground: #171717;
+
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #f8fafc;
+
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #007C74;
+
+  --chart-1: #e11d48;
+  --chart-2: #ea580c;
+  --chart-3: #2563eb;
+  --chart-4: #ca8a04;
+  --chart-5: #16a34a;
+
+  --radius: 0.5rem;
+}
+
+/* Dark Mode Overrides */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+
+  --card: #0a0a0a;
+  --card-foreground: #ededed;
+
+  --popover: #0a0a0a;
+  --popover-foreground: #ededed;
+
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
+
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+
+  --accent: #27272a;
+  --accent-foreground: #fafafa;
+
+  --destructive: #7f1d1d;
+  --destructive-foreground: #fef2f2;
+
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #007C74;
+
+  --chart-1: #2563eb;
+  --chart-2: #16a34a;
+  --chart-3: #ca8a04;
+  --chart-4: #ea580c;
+  --chart-5: #e11d48;
+}
+
+/* 4. Tailwind Theme Mapping */
+@theme {
+  /* Brand Colors */
+  --color-primary: #007C74;
+  --color-blue-primary: #3C55A5;
+  --color-green-primary: #007C74;
+  --color-green-secondary: #00A693;
+  --color-green-light: #E8F8F3;
+  --color-gray-light: #4B5563;
+
+  /* UI System Colors mapping to tokens */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Custom Breakpoints */
+  --breakpoint-xs: 540px;
+  --breakpoint-3xl: 1920px;
+
+  /* Border Radii */
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  /* Native v4 Custom Animation Registration */
+  --animate-shimmer: shimmer 3s infinite;
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+    100% {
+      transform: translateX(100%) translateY(100%) rotate(45deg);
+    }
+  }
+}
+
+/* 5. Custom Utilities & Components */
+@utility container {
+  margin-inline: auto;
+  padding-inline: 1.2rem;
+  width: 100%;
+  max-width: 1440px;
+}
+
+@utility glass-panel {
+  @apply backdrop-blur-md bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 shadow-xl;
+}
+
+/* Legacy Webkit Scrollbar Utility */
+.slim-scroll::-webkit-scrollbar {
+  width: 3px;
+  height: 5px;
+}
+.slim-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+.slim-scroll::-webkit-scrollbar-thumb {
+  background-color: #1BB68A;
+  border-radius: 1px;
+}
+.slim-scroll::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* 6. Global Base Styles */
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-poppins), 'Poppins', Arial, Helvetica, sans-serif;
+}
