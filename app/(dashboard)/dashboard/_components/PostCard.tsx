@@ -316,7 +316,7 @@ export default function PostCard({
           <span className="_feed_inner_timeline_reaction_link">
             <span>
               <svg className="_reaction_svg" xmlns="http://www.w3.org/2000/svg" width="24" height="21" fill="none" viewBox="0 0 24 21">
-                <path stroke="#000" strokejoin="round" d="M23 10.5L12.917 1v5.429C3.267 6.429 1 13.258 1 20c2.785-3.52 5.248-5.429 11.917-5.429V20L23 10.5z" />
+                <path stroke="#000" strokeLinejoin="round" d="M23 10.5L12.917 1v5.429C3.267 6.429 1 13.258 1 20c2.785-3.52 5.248-5.429 11.917-5.429V20L23 10.5z" />
               </svg>
               Share
             </span>
@@ -379,6 +379,7 @@ export default function PostCard({
         {comments.map((comment) => (
           <CommentItem
             key={comment.id}
+            darkMode={darkMode}
             comment={comment}
             postId={post.id}
             currentUserId={currentUserId}
@@ -389,6 +390,42 @@ export default function PostCard({
             }}
           />
         ))}
+        {submittingComment && <CommentSkeleton darkMode={darkMode} />}
+      </div>
+    </div>
+  );
+}
+
+// ─── CommentSkeleton ─────────────────────────────────────────────────────────
+
+function CommentSkeleton({ darkMode }: { darkMode: boolean }) {
+  const baseColor = darkMode ? "bg-[#1e293b]" : "bg-[#e2e8f0]";
+  return (
+    <div className="_comment_main animate-pulse" style={{ marginBottom: "0.75rem" }}>
+      <div className="_comment_image">
+        <div
+          className={`${baseColor} rounded-full`}
+          style={{ width: "40px", height: "40px" }}
+        />
+      </div>
+      <div className="_comment_area" style={{ flexGrow: 1 }}>
+        <div className="_comment_details">
+          <div className="_comment_name">
+            <div className={`${baseColor} rounded`} style={{ width: "100px", height: "12px", marginBottom: "6px" }} />
+          </div>
+          <div className="_comment_status">
+            <div className={`${baseColor} rounded`} style={{ width: "150px", height: "10px", marginBottom: "4px" }} />
+          </div>
+        </div>
+        <div className="_comment_reply" style={{ marginTop: "4px" }}>
+          <div className="_comment_reply_num">
+            <ul className="_comment_reply_list">
+              <li><span className={`${baseColor} rounded`} style={{ display: "inline-block", width: "24px", height: "9px" }} /></li>
+              <li><span className={`${baseColor} rounded`} style={{ display: "inline-block", width: "28px", height: "9px" }} /></li>
+              <li><span className={`${baseColor} rounded`} style={{ display: "inline-block", width: "24px", height: "9px" }} /></li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -403,6 +440,7 @@ function CommentItem({
   currentUserAvatar,
   onCommentLike,
   onCommentUpdate,
+  darkMode,
 }: {
   comment: Comment;
   postId: string;
@@ -410,6 +448,7 @@ function CommentItem({
   currentUserAvatar: string;
   onCommentLike: (id: string) => void;
   onCommentUpdate: (c: Comment) => void;
+  darkMode: boolean;
 }) {
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState("");
@@ -567,7 +606,7 @@ function CommentItem({
         )}
 
         {/* Replies */}
-        {replies.length > 0 && (
+        {(replies.length > 0 || submittingReply) && (
           <div style={{ marginLeft: '1rem', marginTop: '0.5rem' }}>
             {replies.map(reply => (
               <div key={reply.id} className="_comment_main" style={{ marginBottom: '0.5rem' }}>
@@ -612,6 +651,9 @@ function CommentItem({
                 </div>
               </div>
             ))}
+            {submittingReply && (
+              <CommentSkeleton darkMode={darkMode} />
+            )}
           </div>
         )}
       </div>
