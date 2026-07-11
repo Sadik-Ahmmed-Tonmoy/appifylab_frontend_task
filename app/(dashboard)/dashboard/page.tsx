@@ -9,6 +9,7 @@ import DarkModeToggle from "./_components/DarkModeToggle";
 import LeftSidebar from "./_components/LeftSidebar";
 import Navbar from "./_components/Navbar";
 import PostCard from "./_components/PostCard";
+import PostSkeleton from "./_components/PostSkeleton";
 import RightSidebar from "./_components/RightSidebar";
 import StoryCard from "./_components/StoryCard";
 
@@ -88,14 +89,7 @@ export default function DashboardPage() {
                       onPostCreated={fetchPosts}
                     />
 
-                    {loading && (
-                      <div
-                        className="_feed_inner_timeline_post_area _b_radious6 _padd_b24 _padd_t24 _mar_b16"
-                        style={{ textAlign: "center", padding: "2rem" }}
-                      >
-                        <p style={{ opacity: 0.5 }}>Loading posts...</p>
-                      </div>
-                    )}
+                    {loading && <PostSkeleton darkMode={darkMode} />}
 
                     {error && (
                       <div
