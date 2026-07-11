@@ -5,6 +5,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { getExpiryFromToken } from "@/lib/jwt-helpers";
 import { verifyToken } from "@/utils/verifyToken";
 import { JwtPayload } from "jwt-decode";
+import { signOut } from "next-auth/react";
 
 interface DecodedUser extends JwtPayload {
   id?: string;
@@ -185,11 +186,13 @@ export const authOptions: NextAuthOptions = {
             return token;
           } else {
             console.error("❌ Refresh token invalid, logging out");
-            return { ...token, error: "RefreshTokenError" };
+            // return { ...token, error: "RefreshTokenError" };
+            await signOut({ redirect: true, callbackUrl: "/auth/login" });
+            return null;
           }
         } catch (error) {
           console.error("❌ Refresh network error:", error);
-          return { ...token, error: "RefreshTokenError" };
+            return { ...token, error: "RefreshTokenError" };
         }
       }
 
