@@ -5,6 +5,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { getExpiryFromToken } from "@/lib/jwt-helpers";
 import { verifyToken } from "@/utils/verifyToken";
 import { JwtPayload } from "jwt-decode";
+import { JWT } from "next-auth/jwt"; // 👈 import JWT type
 import { signOut } from "next-auth/react";
 
 interface DecodedUser extends JwtPayload {
@@ -51,14 +52,11 @@ export const authOptions: NextAuthOptions = {
           const data = await res.json();
           if (res.ok && data.success) {
             const accessToken = data.data.accessToken;
-
-            // Decode the token to get user data + exp
             const decodedUser = verifyToken(accessToken) as DecodedUser | null;
 
-            // Use `exp` from token (authoritative)
             let accessTokenExpires: number;
             if (decodedUser?.exp) {
-              accessTokenExpires = decodedUser.exp * 1000; // seconds → ms
+              accessTokenExpires = decodedUser.exp * 1000;
             } else {
               console.warn("JWT missing exp claim – using default 1 hour");
               accessTokenExpires = Date.now() + 60 * 60 * 1000;
@@ -71,7 +69,7 @@ export const authOptions: NextAuthOptions = {
               accessToken,
               refreshToken: data.data.refreshToken,
               accessTokenExpires,
-              decodedUser, // store full payload
+              decodedUser, // stored as a property, never spread
             } as any;
           }
           throw new Error(data.message || "Invalid credentials");
@@ -85,8 +83,8 @@ export const authOptions: NextAuthOptions = {
     signIn: "/auth/login",
   },
   callbacks: {
-    async jwt({ token, user, account, profile }) {
-      // 1. Initial login – store everything
+    // ✅ Explicit return type to satisfy TypeScript
+    async jwt({ token, user, account, profile }): Promise<JWT> {
       if (user) {
         token.accessToken = (user as any).accessToken;
         token.refreshToken = (user as any).refreshToken;
@@ -94,10 +92,9 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.email = user.email;
         token.role = (user as any).role;
-        token.decodedUser = (user as any).decodedUser; // ✅ FIX: uncommented
+        token.decodedUser = (user as any).decodedUser || null;
       }
 
-      // 2. Google sign‑in
       if (account?.provider === "google" && profile) {
         try {
           const apiUrl =
@@ -115,43 +112,36 @@ export const authOptions: NextAuthOptions = {
           if (res.ok && data.success) {
             const accessToken = data.data.accessToken;
             const decodedUser = verifyToken(accessToken) as DecodedUser | null;
-
             let accessTokenExpires: number;
             if (decodedUser?.exp) {
               accessTokenExpires = decodedUser.exp * 1000;
             } else {
               accessTokenExpires = Date.now() + 60 * 60 * 1000;
             }
-
             token.accessToken = accessToken;
             token.refreshToken = data.data.refreshToken;
             token.accessTokenExpires = accessTokenExpires;
             token.id = data.data.user.id;
             token.email = data.data.user.email;
             token.role = data.data.user.role;
-            token.decodedUser = decodedUser; // ✅ FIX: uncommented
+            token.decodedUser = decodedUser || null;
           }
         } catch (e) {
           console.error("Google login backend error:", e);
         }
       }
 
-      // 3. Refresh logic – if expired
+      // Refresh logic – check if expired
       const isExpired = Date.now() > (token.accessTokenExpires as number);
       if (!isExpired) {
         return token;
       }
 
-      console.log("isExpired", isExpired);
-      console.log("token", token);
-
       if (token.refreshToken) {
-        console.log("token.refreshToken", token.refreshToken);
-
         try {
           const apiUrl =
             process.env.NEXT_PUBLIC_API_URL || "http://localhost:5016/api/v1";
-          const response = await fetch(`${apiUrl}/auth/refresh-token`, {
+          const response = await fetch(`${apiUrl}/refresh-token`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -161,13 +151,7 @@ export const authOptions: NextAuthOptions = {
           const data = await response.json();
           if (response.ok && data.success) {
             const newAccessToken = data.data.accessToken;
-
-            console.log("newAccessToken", newAccessToken);
-
             const expMs = getExpiryFromToken(newAccessToken);
-
-            console.log("expMs", expMs);
-
             if (expMs !== null) {
               token.accessTokenExpires = expMs;
             } else {
@@ -175,10 +159,9 @@ export const authOptions: NextAuthOptions = {
             }
             token.accessToken = newAccessToken;
 
-            // Update decodedUser from new token
             const newDecoded = verifyToken(newAccessToken) as DecodedUser | null;
             if (newDecoded) {
-              token.decodedUser = newDecoded; // ✅ FIX: uncommented
+              token.decodedUser = newDecoded;
               token.email = newDecoded.email || token.email;
               token.role = newDecoded.role || token.role;
             }
@@ -186,13 +169,12 @@ export const authOptions: NextAuthOptions = {
             return token;
           } else {
             console.error("❌ Refresh token invalid, logging out");
-            // return { ...token, error: "RefreshTokenError" };
             await signOut({ redirect: true, callbackUrl: "/auth/login" });
-            return null;
+            return { ...token, error: "RefreshTokenError" };
           }
         } catch (error) {
           console.error("❌ Refresh network error:", error);
-            return { ...token, error: "RefreshTokenError" };
+          return { ...token, error: "RefreshTokenError" };
         }
       }
 
@@ -200,6 +182,7 @@ export const authOptions: NextAuthOptions = {
     },
 
     async session({ session, token }) {
+      if (!token) return session;
       if ((token as any).error === "RefreshTokenError") {
         return null as any;
       }
@@ -207,14 +190,12 @@ export const authOptions: NextAuthOptions = {
       (session as any).accessToken = token.accessToken;
       (session as any).refreshToken = token.refreshToken;
 
-      // Build session.user from the full decoded payload
       const decoded = (token as any).decodedUser as DecodedUser | undefined;
       (session as any).user = {
         id: token.id || decoded?.id,
         email: token.email || decoded?.email,
         role: token.role || decoded?.role,
-        // Spread full decoded payload, but safely guard against undefined
-        ...(decoded || {}), // ✅ FIX: safe spread
+        ...(decoded || {}),
       };
 
       return session;
