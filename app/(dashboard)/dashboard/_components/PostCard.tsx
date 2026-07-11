@@ -1,8 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { fetchWithAuth } from "@/lib/api";
 import { toast } from "sonner";
+import {
+  useTogglePostLikeMutation,
+  useCreateCommentMutation,
+  useToggleCommentLikeMutation,
+  useCreateReplyMutation,
+  useToggleReplyLikeMutation,
+} from "@/redux/features/post/postApi";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -81,15 +87,16 @@ function timeAgo(dateStr: string): string {
 
 // ─── LikesList Tooltip ───────────────────────────────────────────────────────
 
-function LikesList({ likes }: { likes: Like[] }) {
+function LikesList({ likes, children }: { likes: Like[]; children: React.ReactNode }) {
   const [show, setShow] = useState(false);
-  if (likes.length === 0) return null;
+  if (likes.length === 0) return <>{children}</>;
   return (
     <span
       style={{ position: "relative", cursor: "pointer" }}
       onMouseEnter={() => setShow(true)}
       onMouseLeave={() => setShow(false)}
     >
+      {children}
       {show && (
         <div style={{
           position: "absolute", bottom: "100%", left: 0, zIndex: 100,
@@ -141,6 +148,10 @@ export default function PostCard({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const [togglePostLike] = useTogglePostLikeMutation();
+  const [createComment] = useCreateCommentMutation();
+  const [toggleCommentLike] = useToggleCommentLikeMutation();
+
   // ── Post Like ──
   const handleLikeToggle = async () => {
     const wasLiked = liked;
@@ -152,10 +163,9 @@ export default function PostCard({
         : [...prev, { id: "tmp", userId: currentUserId!, user: { id: currentUserId! } }]
     );
     try {
-      const res = await fetchWithAuth(`/posts/${post.id}/like`, { method: "POST" });
-      if (!res.ok) throw new Error("Failed");
+      await togglePostLike(post.id);
     } catch {
-      // Revert
+      // Revert on network error
       setLiked(wasLiked);
       setLikes(post.likes);
     }
@@ -167,16 +177,11 @@ export default function PostCard({
     if (!commentText.trim()) return;
     setSubmittingComment(true);
     try {
-      const res = await fetchWithAuth(`/posts/${post.id}/comments`, {
-        method: "POST",
-        body: JSON.stringify({ text: commentText.trim() }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setComments(prev => [...prev, { ...data.data, likes: data.data.likes || [], replies: data.data.replies || [] }]);
-        setCommentText("");
+      const res: any = await createComment({ postId: post.id, text: commentText.trim() });
+      if (res.error) {
+        toast.error(res.error.data?.message || "Failed to add comment");
       } else {
-        toast.error(data.message || "Failed to add comment");
+        setCommentText("");
       }
     } catch {
       toast.error("Failed to add comment");
@@ -188,6 +193,7 @@ export default function PostCard({
   // ── Comment Like ──
   const handleCommentLike = async (commentId: string) => {
     const isLiked = comments.find(c => c.id === commentId)?.likes.some(l => l.userId === currentUserId);
+    // Optimistic update
     setComments(prev => prev.map(c =>
       c.id !== commentId ? c : {
         ...c,
@@ -197,7 +203,7 @@ export default function PostCard({
       }
     ));
     try {
-      await fetchWithAuth(`/posts/comments/${commentId}/like`, { method: "POST" });
+      await toggleCommentLike(commentId);
     } catch {
       setComments(post.comments);
     }
@@ -269,7 +275,9 @@ export default function PostCard({
           <img src="/assets/images/react_img4.png" alt="Image" className="_react_img _rect_img_mbl_none" />
           <img src="/assets/images/react_img5.png" alt="Image" className="_react_img _rect_img_mbl_none" />
           <p className="_feed_inner_timeline_total_reacts_para" style={{ cursor: "pointer" }}>
-            {likes.length > 0 ? `${likes.length}+` : "9+"} <LikesList likes={likes} />
+            <LikesList likes={likes}>
+              <span>{likes.length}</span>
+            </LikesList>
           </p>
         </div>
         <div className="_feed_inner_timeline_total_reacts_txt">
@@ -450,10 +458,18 @@ function CommentItem({
   onCommentUpdate: (c: Comment) => void;
   darkMode: boolean;
 }) {
+  const [createReply] = useCreateReplyMutation();
+  const [toggleReplyLike] = useToggleReplyLikeMutation();
+
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [submittingReply, setSubmittingReply] = useState(false);
   const [replies, setReplies] = useState<Reply[]>(comment.replies || []);
+
+  // Keep replies in sync when parent comment updates
+  useEffect(() => {
+    setReplies(comment.replies || []);
+  }, [comment.replies]);
 
   const isCommentLiked = comment.likes.some(l => l.userId === currentUserId);
 
@@ -462,19 +478,12 @@ function CommentItem({
     if (!replyText.trim()) return;
     setSubmittingReply(true);
     try {
-      const res = await fetchWithAuth(`/posts/comments/${comment.id}/replies`, {
-        method: "POST",
-        body: JSON.stringify({ text: replyText.trim() }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        const newReply = { ...data.data, likes: data.data.likes || [] };
-        setReplies(prev => [...prev, newReply]);
+      const res: any = await createReply({ commentId: comment.id, text: replyText.trim() });
+      if (res.error) {
+        toast.error(res.error.data?.message || "Failed to add reply");
+      } else {
         setReplyText("");
         setShowReplyInput(false);
-        onCommentUpdate({ ...comment, replies: [...replies, newReply] });
-      } else {
-        toast.error(data.message || "Failed to add reply");
       }
     } catch {
       toast.error("Failed to add reply");
@@ -485,6 +494,7 @@ function CommentItem({
 
   const handleReplyLike = async (replyId: string) => {
     const isLiked = replies.find(r => r.id === replyId)?.likes.some(l => l.userId === currentUserId);
+    // Optimistic update
     setReplies(prev => prev.map(r =>
       r.id !== replyId ? r : {
         ...r,
@@ -494,9 +504,9 @@ function CommentItem({
       }
     ));
     try {
-      await fetchWithAuth(`/posts/replies/${replyId}/like`, { method: "POST" });
+      await toggleReplyLike(replyId);
     } catch {
-      setReplies(comment.replies);
+      setReplies(comment.replies || []);
     }
   };
 
@@ -522,18 +532,19 @@ function CommentItem({
             </p>
           </div>
           {comment.likes.length > 0 && (
-            <div className="_total_reactions">
-              <div className="_total_react">
-                <span className="_reaction_like" style={{ position: "relative" }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-thumbs-up"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
-                  <LikesList likes={comment.likes} />
-                </span>
-                <span className="_reaction_heart">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-heart"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                </span>
+            <LikesList likes={comment.likes}>
+              <div className="_total_reactions" style={{ cursor: "pointer" }}>
+                <div className="_total_react">
+                  <span className="_reaction_like" style={{ position: "relative" }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-thumbs-up"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                  </span>
+                  <span className="_reaction_heart">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-heart"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                  </span>
+                </div>
+                <span className="_total">{comment.likes.length}</span>
               </div>
-              <span className="_total">{comment.likes.length}</span>
-            </div>
+            </LikesList>
           )}
           <div className="_comment_reply">
             <div className="_comment_reply_num">
@@ -621,10 +632,13 @@ function CommentItem({
                     <div className="_comment_status">
                       <p className="_comment_status_text"><span>{reply.text}</span></p>
                     </div>
-                    <div className="_total_reactions">
-                      <span className="_total" style={{ fontSize: '12px' }}>{reply.likes.length} likes</span>
-                      <LikesList likes={reply.likes} />
-                    </div>
+                    {reply.likes.length > 0 && (
+                      <LikesList likes={reply.likes}>
+                        <div className="_total_reactions" style={{ cursor: "pointer" }}>
+                          <span className="_total" style={{ fontSize: '12px' }}>{reply.likes.length} likes</span>
+                        </div>
+                      </LikesList>
+                    )}
                     <div className="_comment_reply">
                       <ul className="_comment_reply_list">
                         <li>

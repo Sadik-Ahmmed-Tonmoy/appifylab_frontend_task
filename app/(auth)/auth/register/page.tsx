@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 
 const SignupPage = () => {
   const router = useRouter();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [repeatPassword, setRepeatPassword] = useState('');
@@ -17,7 +19,7 @@ const SignupPage = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password || !repeatPassword) {
+    if (!firstName || !lastName || !email || !password || !repeatPassword) {
       toast.error("All fields are required");
       return;
     }
@@ -44,9 +46,9 @@ const SignupPage = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          firstName: "",
-          lastName: "",
-          fullName: "",
+          firstName,
+          lastName,
+          fullName: `${firstName} ${lastName}`.trim(),
           email,
           password,
           logInProcess: 'EMAIL',
@@ -116,6 +118,32 @@ const SignupPage = () => {
                 </div>
                 <form className="_social_registration_form" onSubmit={handleRegister}>
                   <div className="row">
+                    <div className="col-xl-6 col-lg-6 col-md-6 col-sm-12">
+                      <div className="_social_registration_form_input _mar_b14">
+                        <label className="_social_registration_label _mar_b8">First Name</label>
+                        <input
+                          type="text"
+                          id="reg-firstName"
+                          className="form-control _social_registration_input"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="col-xl-6 col-lg-6 col-md-6 col-sm-12">
+                      <div className="_social_registration_form_input _mar_b14">
+                        <label className="_social_registration_label _mar_b8">Last Name</label>
+                        <input
+                          type="text"
+                          id="reg-lastName"
+                          className="form-control _social_registration_input"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
                     <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                       <div className="_social_registration_form_input _mar_b14">
                         <label className="_social_registration_label _mar_b8">Email</label>

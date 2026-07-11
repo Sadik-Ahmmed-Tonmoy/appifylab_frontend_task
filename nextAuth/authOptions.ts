@@ -23,11 +23,11 @@ export const authOptions: NextAuthOptions = {
   providers: [
     ...(process.env.GOOGLE_ID && process.env.GOOGLE_SECRET
       ? [
-          GoogleProvider({
-            clientId: process.env.GOOGLE_ID as string,
-            clientSecret: process.env.GOOGLE_SECRET as string,
-          }),
-        ]
+        GoogleProvider({
+          clientId: process.env.GOOGLE_ID as string,
+          clientSecret: process.env.GOOGLE_SECRET as string,
+        }),
+      ]
       : []),
     CredentialsProvider({
       name: "Credentials",
@@ -70,6 +70,10 @@ export const authOptions: NextAuthOptions = {
               refreshToken: data.data.refreshToken,
               accessTokenExpires,
               decodedUser, // stored as a property, never spread
+              fullName: data.data.user.userProfile?.fullName || "",
+              firstName: data.data.user.userProfile?.firstName || "",
+              lastName: data.data.user.userProfile?.lastName || "",
+              avatarUrl: data.data.user.userProfile?.profileImage || "",
             } as any;
           }
           throw new Error(data.message || "Invalid credentials");
@@ -93,6 +97,10 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email;
         token.role = (user as any).role;
         token.decodedUser = (user as any).decodedUser || null;
+        token.fullName = (user as any).fullName || "";
+        token.firstName = (user as any).firstName || "";
+        token.lastName = (user as any).lastName || "";
+        token.avatarUrl = (user as any).avatarUrl || "";
       }
 
       if (account?.provider === "google" && profile) {
@@ -125,6 +133,10 @@ export const authOptions: NextAuthOptions = {
             token.email = data.data.user.email;
             token.role = data.data.user.role;
             token.decodedUser = decodedUser || null;
+            token.fullName = data.data.user.userProfile?.fullName || "";
+            token.firstName = data.data.user.userProfile?.firstName || "";
+            token.lastName = data.data.user.userProfile?.lastName || "";
+            token.avatarUrl = data.data.user.userProfile?.profileImage || "";
           }
         } catch (e) {
           console.error("Google login backend error:", e);
@@ -195,6 +207,10 @@ export const authOptions: NextAuthOptions = {
         id: token.id || decoded?.id,
         email: token.email || decoded?.email,
         role: token.role || decoded?.role,
+        fullName: (token as any).fullName || (decoded as any)?.fullName || "",
+        firstName: (token as any).firstName || (decoded as any)?.firstName || "",
+        lastName: (token as any).lastName || (decoded as any)?.lastName || "",
+        avatarUrl: (token as any).avatarUrl || (decoded as any)?.avatarUrl || "",
         ...(decoded || {}),
       };
 

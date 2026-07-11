@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { fetchWithAuth } from "@/lib/api";
 import { useSession } from "next-auth/react";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useGetMeQuery } from "@/redux/features/auth/authApi";
+import { useGetPostsQuery } from "@/redux/features/post/postApi";
 import CreatePost from "./_components/CreatePost";
 import DarkModeToggle from "./_components/DarkModeToggle";
 import LeftSidebar from "./_components/LeftSidebar";
@@ -16,41 +17,39 @@ import StoryCard from "./_components/StoryCard";
 export default function DashboardPage() {
   const { data: session } = useSession();
   const [darkMode, setDarkMode] = useState(false);
-  const [posts, setPosts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchPosts = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetchWithAuth("/posts");
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Failed to load posts");
-      }
-      const data = await res.json();
-      setPosts(data.data || []);
-    } catch (err: any) {
-      setError(err.message || "Failed to load posts");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const {
+    data: posts = [],
+    isLoading: loading,
+    error: postsError,
+    refetch: refetchPosts,
+  } = useGetPostsQuery(undefined, {
+    skip: !session,
+  });
 
-  useEffect(() => {
-    if (session) {
-      fetchPosts();
-    }
-  }, [session, fetchPosts]);
+  const { data: meData } = useGetMeQuery(undefined, {
+    skip: !session,
+  });
 
-  const currentUser = (session as any)?.user;
+  const error = postsError
+    ? (postsError as any).data?.message || "Failed to load posts"
+    : null;
+
+  // Prefer getMe data (live from server), fall back to NextAuth session
+  const sessionUser = (session as any)?.user;
+  const meUser = (meData as any)?.data?.user ?? (meData as any)?.data;
+
+  const currentUserId = meUser?.id || sessionUser?.id;
   const userName =
-    currentUser?.fullName ||
-    `${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`.trim() ||
-    "Dylan Field";
-  const userAvatar = currentUser?.avatarUrl || "/assets/images/Avatar.png";
-  const currentUserId = currentUser?.id;
+    meUser?.userProfile?.fullName ||
+    `${meUser?.userProfile?.firstName || ""} ${meUser?.userProfile?.lastName || ""}`.trim() ||
+    sessionUser?.fullName ||
+    `${sessionUser?.firstName || ""} ${sessionUser?.lastName || ""}`.trim() ||
+    "User";
+  const userAvatar =
+    meUser?.userProfile?.profileImage ||
+    sessionUser?.avatarUrl ||
+    "/assets/images/Avatar.png";
 
   return (
     <div
@@ -86,7 +85,7 @@ export default function DashboardPage() {
                     <CreatePost
                       darkMode={darkMode}
                       userAvatar={userAvatar}
-                      onPostCreated={fetchPosts}
+                      onPostCreated={refetchPosts}
                     />
 
                     {loading && <PostSkeleton darkMode={darkMode} />}
@@ -98,7 +97,7 @@ export default function DashboardPage() {
                       >
                         <p style={{ color: "red", opacity: 0.7 }}>{error}</p>
                         <button
-                          onClick={fetchPosts}
+                          onClick={refetchPosts}
                           style={{
                             marginTop: "1rem",
                             padding: "0.5rem 1rem",
@@ -122,14 +121,14 @@ export default function DashboardPage() {
                     )}
 
                     {!loading &&
-                      posts.map((post) => (
+                      posts.map((post: any) => (
                         <PostCard
                           key={post.id}
                           darkMode={darkMode}
                           post={post}
                           currentUserId={currentUserId}
                           currentUserAvatar={userAvatar}
-                          onUpdate={fetchPosts}
+                          onUpdate={refetchPosts}
                         />
                       ))}
                   </div>

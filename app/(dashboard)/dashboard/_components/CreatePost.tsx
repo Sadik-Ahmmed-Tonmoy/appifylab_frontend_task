@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { fetchWithAuth } from "@/lib/api";
+import { useCreatePostMutation } from "@/redux/features/post/postApi";
 import { toast } from "sonner";
 
 interface CreatePostProps {
@@ -37,6 +37,8 @@ export default function CreatePost({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const [createPost, { isLoading: submitting }] = useCreatePostMutation();
+
   const handlePost = async () => {
     if (!text.trim() && !imageFile) {
       toast.error("Please write something or attach an image");
@@ -49,12 +51,10 @@ export default function CreatePost({
       formData.append("visibility", visibility);
       if (imageFile) formData.append("image", imageFile);
 
-      const res = await fetchWithAuth("/posts", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const res: any = await createPost(formData);
+      if (res.error) {
+        toast.error(res.error.data?.message || "Failed to create post");
+      } else {
         toast.success("Post created successfully!");
         setText("");
         setImageFile(null);
@@ -62,8 +62,6 @@ export default function CreatePost({
         setVisibility("PUBLIC");
         if (fileInputRef.current) fileInputRef.current.value = "";
         onPostCreated?.();
-      } else {
-        toast.error(data.message || "Failed to create post");
       }
     } catch (err: any) {
       toast.error(err.message || "An error occurred");
@@ -71,6 +69,9 @@ export default function CreatePost({
       setLoading(false);
     }
   };
+
+  // suppress unused warning – loading drives the button disabled state too
+  void submitting;
 
   return (
     <div className="_feed_inner_text_area  _b_radious6 _padd_b24 _padd_t24 _padd_r24 _padd_l24 _mar_b16">
@@ -167,7 +168,7 @@ export default function CreatePost({
                   <path fill="#666" d="M14.371 2c.32 0 .585.262.627.603l.005.095v.788c2.598.195 4.188 2.033 4.18 5v8.488c0 3.145-1.786 5.026-4.656 5.026H7.395C4.53 22 2.74 20.087 2.74 16.904V8.486c0-2.966 1.596-4.804 4.187-5v-.788c0-.386.283-.698.633-.698.32 0 .584.262.626.603l.006.095v.771h5.546v-.771c0-.386.284-.698.633-.698zm3.546 8.283H4.004l.001 6.621c0 2.325 1.137 3.616 3.183 3.697l.207.004h7.132c2.184 0 3.39-1.271 3.39-3.63v-6.692zm-3.202 5.853c.349 0 .632.312.632.698 0 .353-.238.645-.546.691l-.086.006c-.357 0-.64-.312-.64-.697 0-.354.237-.645.546-.692l.094-.006zm-3.742 0c.35 0 .632.312.632.698 0 .353-.238.645-.546.691l-.086.006c-.357 0-.64-.312-.64-.697 0-.354.238-.645.546-.692l.094-.006zm-3.75 0c.35 0 .633.312.633.698 0 .353-.238.645-.547.691l-.093.006c-.35 0-.633-.312-.633-.697 0-.354.238-.645.547-.692l.094-.006zm7.492-3.615c.349 0 .632.312.632.697 0 .354-.238.645-.546.692l-.086.006c-.357 0-.64-.312-.64-.698 0-.353.237-.645.546-.691l.094-.006zm-3.742 0c.35 0 .632.312.632.697 0 .354-.238.645-.546.692l-.086.006c-.357 0-.64-.312-.64-.698 0-.353.238-.645.546-.691l.094-.006zm-3.75 0c.35 0 .633.312.633.697 0 .354-.238.645-.547.692l-.093.006c-.35 0-.633-.312-.633-.698 0-.353.238-.645.547-.691l.094-.006zm6.515-7.657H8.192v.895c0 .385-.283.698-.633.698-.32 0-.584-.263-.626-.603l-.006-.095v-.874c-1.886.173-2.922 1.422-2.922 3.6v.402h13.912v-.403c.007-2.181-1.024-3.427-2.914-3.599v.874c0 .385-.283.698-.632.698-.32 0-.585-.263-.627-.603l-.005-.095v-.895z" />
                 </svg>
               </span>
-              Event
+              {visibility === "PUBLIC" ? "Public" : "Private"}
             </button>
           </div>
           {/* Article */}
@@ -229,6 +230,7 @@ export default function CreatePost({
                 type="button"
                 className="_feed_inner_text_area_bottom_photo_link"
                 onClick={() => setVisibility(v => v === "PUBLIC" ? "PRIVATE" : "PUBLIC")}
+                title={`Visibility: ${visibility} — click to toggle`}
               >
                 <span className="_feed_inner_text_area_bottom_photo_iamge _mar_img">
                   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="24" fill="none" viewBox="0 0 22 24">
