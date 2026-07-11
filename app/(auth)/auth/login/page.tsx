@@ -73,7 +73,7 @@ const LoginPage = () => {
                 </div>
                 <p className="_social_login_content_para _mar_b8">Welcome back</p>
                 <h4 className="_social_login_content_title _titl4 _mar_b50">Login to your account</h4>
-                {process.env.NEXT_PUBLIC_GOOGLE_ID && (
+             
                   <>
                     <button 
                       type="button" 
@@ -85,7 +85,7 @@ const LoginPage = () => {
                     <div className="_social_login_content_bottom_txt _mar_b40"> <span>Or</span>
                     </div>
                   </>
-                )}
+              
                 <form className="_social_login_form" onSubmit={handleLogin}>
                   <div className="row">
                     <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
@@ -116,7 +116,7 @@ const LoginPage = () => {
                   <div className="row">
                     <div className="col-lg-6 col-xl-6 col-md-6 col-sm-12">
                       <div className="form-check _social_login_form_check">
-                        <input className="form-check-input _social_login_form_check_input" type="checkbox" id="flexRadioDefault2" defaultChecked />
+                        <input className="form-check-input _social_login_form_check_input" type="radio" name="flexRadioDefault" id="flexRadioDefault2" defaultChecked />{" "}
                         <label className="form-check-label _social_login_form_check_label" htmlFor="flexRadioDefault2">Remember me</label>
                       </div>
                     </div>

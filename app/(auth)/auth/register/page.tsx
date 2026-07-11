@@ -8,8 +8,6 @@ import { toast } from 'sonner';
 
 const SignupPage = () => {
   const router = useRouter();
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [repeatPassword, setRepeatPassword] = useState('');
@@ -19,7 +17,7 @@ const SignupPage = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!firstName || !lastName || !email || !password || !repeatPassword) {
+    if (!email || !password || !repeatPassword) {
       toast.error("All fields are required");
       return;
     }
@@ -46,9 +44,9 @@ const SignupPage = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          firstName,
-          lastName,
-          fullName: `${firstName} ${lastName}`.trim(),
+          firstName: "",
+          lastName: "",
+          fullName: "",
           email,
           password,
           logInProcess: 'EMAIL',
@@ -107,49 +105,17 @@ const SignupPage = () => {
                 </div>
                 <p className="_social_registration_content_para _mar_b8">Get Started Now</p>
                 <h4 className="_social_registration_content_title _titl4 _mar_b50">Registration</h4>
-                {hasGoogleProvider && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
-                      className="_social_registration_content_btn _mar_b40"
-                    >
-                      <img src="/assets/images/google.svg" alt="Image" className="_google_img" /> <span>Register with google</span>
-                    </button>
-                    <div className="_social_registration_content_bottom_txt _mar_b40"> <span>Or</span>
-                    </div>
-                  </>
-                )}
+                <button
+                  type="button"
+                  onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+                  className="_social_registration_content_btn _mar_b40"
+                >
+                  <img src="/assets/images/google.svg" alt="Image" className="_google_img" /> <span>Register with google</span>
+                </button>
+                <div className="_social_registration_content_bottom_txt _mar_b40"> <span>Or</span>
+                </div>
                 <form className="_social_registration_form" onSubmit={handleRegister}>
                   <div className="row">
-                    <div className="col-xl-6 col-lg-6 col-md-6 col-sm-12">
-                      <div className="_social_registration_form_input _mar_b14">
-                        <label className="_social_registration_label _mar_b8">First Name</label>
-                        <input
-                          type="text"
-                          id="reg-firstName"
-                          className="form-control _social_registration_input"
-                          placeholder="John"
-                          value={firstName}
-                          onChange={(e) => setFirstName(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="col-xl-6 col-lg-6 col-md-6 col-sm-12">
-                      <div className="_social_registration_form_input _mar_b14">
-                        <label className="_social_registration_label _mar_b8">Last Name</label>
-                        <input
-                          type="text"
-                          id="reg-lastName"
-                          className="form-control _social_registration_input"
-                          placeholder="Doe"
-                          value={lastName}
-                          onChange={(e) => setLastName(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
                     <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
                       <div className="_social_registration_form_input _mar_b14">
                         <label className="_social_registration_label _mar_b8">Email</label>
@@ -157,7 +123,6 @@ const SignupPage = () => {
                           type="email"
                           id="reg-email"
                           className="form-control _social_registration_input"
-                          placeholder="john@example.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           required
@@ -171,7 +136,6 @@ const SignupPage = () => {
                           type="password"
                           id="reg-password"
                           className="form-control _social_registration_input"
-                          placeholder="Min 6 characters"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           required
@@ -185,7 +149,6 @@ const SignupPage = () => {
                           type="password"
                           id="reg-repeatPassword"
                           className="form-control _social_registration_input"
-                          placeholder="Repeat password"
                           value={repeatPassword}
                           onChange={(e) => setRepeatPassword(e.target.value)}
                           required
@@ -198,11 +161,12 @@ const SignupPage = () => {
                       <div className="form-check _social_registration_form_check">
                         <input
                           className="form-check-input _social_registration_form_check_input"
-                          type="checkbox"
+                          type="radio"
+                          name="flexRadioDefault"
                           id="reg-agree"
                           checked={agreed}
                           onChange={(e) => setAgreed(e.target.checked)}
-                        />
+                        />{" "}
                         <label className="form-check-label _social_registration_form_check_label" htmlFor="reg-agree">I agree to terms &amp; conditions</label>
                       </div>
                     </div>
@@ -214,6 +178,7 @@ const SignupPage = () => {
                           type="submit"
                           id="reg-submit"
                           className="_social_registration_form_btn_link _btn1"
+                          style={{ padding: '12px 90px' }}
                           disabled={loading}
                         >
                           {loading ? "Registering..." : "Register now"}

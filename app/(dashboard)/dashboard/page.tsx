@@ -47,7 +47,7 @@ export default function DashboardPage() {
   const userName =
     currentUser?.fullName ||
     `${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`.trim() ||
-    "User";
+    "Dylan Field";
   const userAvatar = currentUser?.avatarUrl || "/assets/images/Avatar.png";
   const currentUserId = currentUser?.id;
 
