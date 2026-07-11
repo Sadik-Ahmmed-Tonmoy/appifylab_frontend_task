@@ -5,6 +5,7 @@ import MyContextProvider from "@/lib/MyContextProvider";
 import SessionProviderForNextAuth from "@/nextAuth/SessionProviderForNextAuth";
 import ReduxStoreProvider from "@/redux/ReduxStoreProvider";
 import { Toaster } from "sonner";
+import AuthSyncWithNextAuth from "@/components/AuthSyncWithNextAuth";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -24,10 +25,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body suppressHydrationWarning={true} className={`${poppins.variable} font-[var(--font-poppins)] antialiased`}>
+      <body
+        suppressHydrationWarning={true}
+        className={`${poppins.variable} font-[var(--font-poppins)] antialiased`}
+      >
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;300;400;500;600;700;800&display=swap" rel="stylesheet" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;300;400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
         <link rel="stylesheet" href="/assets/css/bootstrap.min.css" />
         <link rel="stylesheet" href="/assets/css/common.css" />
         <link rel="stylesheet" href="/assets/css/main.css" />
@@ -35,8 +46,10 @@ export default function RootLayout({
         <MyContextProvider>
           <SessionProviderForNextAuth>
             <ReduxStoreProvider>
-              <Toaster />
-              {children}
+              <AuthSyncWithNextAuth>
+                <Toaster />
+                {children}
+              </AuthSyncWithNextAuth>
             </ReduxStoreProvider>
           </SessionProviderForNextAuth>
         </MyContextProvider>

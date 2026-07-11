@@ -23,6 +23,7 @@ const authSlice = createSlice({
       const { user, access_token, refresh_token } = action.payload;
       state.user = user;
       state.access_token = access_token;
+      // state.refresh_token = "its on the server, handled by next-auth";
       state.refresh_token = refresh_token;
     },
     logout: (state) => {
@@ -37,5 +38,5 @@ export const { setUser, logout } = authSlice.actions;
 
 export default authSlice.reducer;
 
-export const useCurrentToken = (state: RootState) => state.auth.access_token;
+export const selectCurrentToken = (state: RootState) => state.auth.access_token;
 export const selectCurrentUser = (state: RootState) => state.auth.user;

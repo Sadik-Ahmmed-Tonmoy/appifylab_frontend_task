@@ -73,15 +73,19 @@ const LoginPage = () => {
                 </div>
                 <p className="_social_login_content_para _mar_b8">Welcome back</p>
                 <h4 className="_social_login_content_title _titl4 _mar_b50">Login to your account</h4>
-                <button 
-                  type="button" 
-                  onClick={() => signIn('google', { callbackUrl: '/dashboard' })} 
-                  className="_social_login_content_btn _mar_b40"
-                >
-                  <img src="/assets/images/google.svg" alt="Image" className="_google_img" /> <span>Or sign-in with google</span>
-                </button>
-                <div className="_social_login_content_bottom_txt _mar_b40"> <span>Or</span>
-                </div>
+                {process.env.NEXT_PUBLIC_GOOGLE_ID && (
+                  <>
+                    <button 
+                      type="button" 
+                      onClick={() => signIn('google', { callbackUrl: '/dashboard' })} 
+                      className="_social_login_content_btn _mar_b40"
+                    >
+                      <img src="/assets/images/google.svg" alt="Image" className="_google_img" /> <span>Or sign-in with google</span>
+                    </button>
+                    <div className="_social_login_content_bottom_txt _mar_b40"> <span>Or</span>
+                    </div>
+                  </>
+                )}
                 <form className="_social_login_form" onSubmit={handleLogin}>
                   <div className="row">
                     <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">

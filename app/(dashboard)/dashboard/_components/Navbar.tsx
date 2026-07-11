@@ -6,9 +6,10 @@ import { signOut } from "next-auth/react";
 
 interface NavbarProps {
   userName?: string;
+  userAvatar?: string;
 }
 
-export default function Navbar({ userName = "Dylan Field" }: NavbarProps) {
+export default function Navbar({ userName = "Dylan Field", userAvatar = "/assets/images/Avatar.png" }: NavbarProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [notifySettingsOpen, setNotifySettingsOpen] = useState(false);
@@ -414,7 +415,7 @@ export default function Navbar({ userName = "Dylan Field" }: NavbarProps) {
             </ul>
             <div className="_header_nav_profile" ref={profileRef}>
               <div className="_header_nav_profile_image">
-                <img src="/assets/images/profile.png" alt="Image" className="_nav_profile_img" />
+                <img src={userAvatar} alt="Profile" className="_nav_profile_img" />
               </div>
               <div className="_header_nav_dropdown">
                 <p className="_header_nav_para">{userName}</p>
@@ -428,7 +429,7 @@ export default function Navbar({ userName = "Dylan Field" }: NavbarProps) {
               <div id="_prfoile_drop" className={`_nav_profile_dropdown _profile_dropdown ${profileOpen ? "show" : ""}`}>
                 <div className="_nav_profile_dropdown_info">
                   <div className="_nav_profile_dropdown_image">
-                    <img src="/assets/images/profile.png" alt="Image" className="_nav_drop_img" />
+                    <img src={userAvatar} alt="Profile" className="_nav_drop_img" />
                   </div>
                   <div className="_nav_profile_dropdown_info_txt">
                     <h4 className="_nav_dropdown_title">{userName}</h4>
