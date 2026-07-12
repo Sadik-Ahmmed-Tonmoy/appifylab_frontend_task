@@ -6,6 +6,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { toast } from 'sonner';
+import { z } from 'zod';
+
+const loginSchema = z.object({
+  email: z.string().min(1, "Email is required").email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
 
 const LoginPage = () => {
   const router = useRouter();
@@ -13,15 +19,30 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   const handleLogin = async (e: React.FormEvent) => {
     console.log("i am clicked");
     e.preventDefault();
-    if (!email || !password) {
-      toast.error("Please fill in all fields");
+    setErrors({});
+
+    const validation = loginSchema.safeParse({ email, password });
+    if (!validation.success) {
+      const formattedErrors: { email?: string; password?: string } = {};
+      validation.error.issues.forEach((issue) => {
+        const path = issue.path[0] as keyof typeof formattedErrors;
+        if (path) {
+          formattedErrors[path] = issue.message;
+        }
+      });
+      setErrors(formattedErrors);
+
+      const errorMsg = validation.error.issues[0]?.message || "Invalid input";
+      toast.error(errorMsg);
       return;
     }
 
+    const toastId = toast.loading("Logging in...");
     setLoading(true);
     try {
       const res = await signIn('credentials', {
@@ -32,14 +53,14 @@ const LoginPage = () => {
       });
 
       if (res?.error) {
-        toast.error(res.error || "Login failed");
+        toast.error(res.error || "Login failed", { id: toastId });
       } else {
-        toast.success("Login successful!");
+        toast.success("Login successful!", { id: toastId });
         router.push('/dashboard');
         router.refresh();
       }
     } catch (err: any) {
-      toast.error(err.message || "An unexpected error occurred");
+      toast.error(err.message || "An unexpected error occurred", { id: toastId });
     } finally {
       setLoading(false); 
     } 
@@ -99,8 +120,13 @@ const LoginPage = () => {
                           className="form-control _social_login_input"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          required
+                          // required
                         />
+                        {errors.email && (
+                          <span className="text-danger" style={{ fontSize: "12px", marginTop: "4px", display: "block" }}>
+                            {errors.email}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
@@ -111,8 +137,13 @@ const LoginPage = () => {
                           className="form-control _social_login_input"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          required
+                          // required
                         />
+                        {errors.password && (
+                          <span className="text-danger" style={{ fontSize: "12px", marginTop: "4px", display: "block" }}>
+                            {errors.password}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

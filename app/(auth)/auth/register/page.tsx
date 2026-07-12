@@ -6,6 +6,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
+import { z } from "zod";
+
+const signupSchema = z
+  .object({
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    email: z.string().min(1, "Email is required").email("Invalid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    repeatPassword: z.string().min(1, "Repeat password is required"),
+    agreed: z.boolean().refine((val) => val === true, {
+      message: "Please agree to terms & conditions",
+    }),
+  })
+  .refine((data) => data.password === data.repeatPassword, {
+    message: "Passwords do not match",
+    path: ["repeatPassword"],
+  });
 
 const SignupPage = () => {
   const router = useRouter();
@@ -16,30 +33,51 @@ const SignupPage = () => {
   const [repeatPassword, setRepeatPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    password?: string;
+    repeatPassword?: string;
+    agreed?: string;
+  }>({});
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
 
-    if (!firstName || !lastName || !email || !password || !repeatPassword) {
-      toast.error("All fields are required");
+    const validation = signupSchema.safeParse({
+      firstName,
+      lastName,
+      email,
+      password,
+      repeatPassword,
+      agreed,
+    });
+
+    if (!validation.success) {
+      const formattedErrors: {
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        password?: string;
+        repeatPassword?: string;
+        agreed?: string;
+      } = {};
+      validation.error.issues.forEach((issue) => {
+        const path = issue.path[0] as keyof typeof formattedErrors;
+        if (path) {
+          formattedErrors[path] = issue.message;
+        }
+      });
+      setErrors(formattedErrors);
+
+      const firstError = validation.error.issues[0]?.message || "Invalid input";
+      toast.error(firstError);
       return;
     }
 
-    if (password !== repeatPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-
-    if (!agreed) {
-      toast.error("Please agree to terms & conditions");
-      return;
-    }
-
+    const toastId = toast.loading("Registering...");
     setLoading(true);
     try {
       const apiUrl =
@@ -59,39 +97,29 @@ const SignupPage = () => {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        toast.success("Registration successful! Please wait for login");
-          // e.preventDefault();
-          if (!email || !password) {
-            toast.error("Please fill in all fields");
-            return;
-          }
+        toast.loading("Registration successful! Logging in...", { id: toastId });
+        try {
+          const loginRes = await signIn("credentials", {
+            email,
+            password,
+            redirect: false,
+          });
 
-          setLoading(true);
-          try {
-            const res = await signIn("credentials", {
-              email,
-              password,
-              redirect: false,
-            });
-
-            if (res?.error) {
-              toast.error(res.error || "Login failed");
-            } else {
-              toast.success("Login successful!");
-              router.push("/dashboard");
-              router.refresh();
-            }
-          } catch (err: any) {
-            toast.error(err.message || "An unexpected error occurred");
-          } finally {
-            setLoading(false);
+          if (loginRes?.error) {
+            toast.error(loginRes.error || "Login failed", { id: toastId });
+          } else {
+            toast.success("Login successful!", { id: toastId });
+            router.push("/dashboard");
+            router.refresh();
           }
-        
+        } catch (err: any) {
+          toast.error(err.message || "An unexpected error occurred during login", { id: toastId });
+        }
       } else {
-        toast.error(data.message || "Registration failed");
+        toast.error(data.message || "Registration failed", { id: toastId });
       }
     } catch (err: any) {
-      toast.error(err.message || "An error occurred during registration");
+      toast.error(err.message || "An error occurred during registration", { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -187,8 +215,12 @@ const SignupPage = () => {
                           className="form-control _social_registration_input"
                           value={firstName}
                           onChange={(e) => setFirstName(e.target.value)}
-                          required
                         />
+                        {errors.firstName && (
+                          <span className="text-danger" style={{ fontSize: "12px", marginTop: "4px", display: "block" }}>
+                            {errors.firstName}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="col-xl-6 col-lg-6 col-md-6 col-sm-12">
@@ -202,8 +234,12 @@ const SignupPage = () => {
                           className="form-control _social_registration_input"
                           value={lastName}
                           onChange={(e) => setLastName(e.target.value)}
-                          required
                         />
+                        {errors.lastName && (
+                          <span className="text-danger" style={{ fontSize: "12px", marginTop: "4px", display: "block" }}>
+                            {errors.lastName}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
@@ -217,8 +253,12 @@ const SignupPage = () => {
                           className="form-control _social_registration_input"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          required
                         />
+                        {errors.email && (
+                          <span className="text-danger" style={{ fontSize: "12px", marginTop: "4px", display: "block" }}>
+                            {errors.email}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
@@ -232,8 +272,12 @@ const SignupPage = () => {
                           className="form-control _social_registration_input"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          required
                         />
+                        {errors.password && (
+                          <span className="text-danger" style={{ fontSize: "12px", marginTop: "4px", display: "block" }}>
+                            {errors.password}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="col-xl-12 col-lg-12 col-md-12 col-sm-12">
@@ -247,8 +291,12 @@ const SignupPage = () => {
                           className="form-control _social_registration_input"
                           value={repeatPassword}
                           onChange={(e) => setRepeatPassword(e.target.value)}
-                          required
                         />
+                        {errors.repeatPassword && (
+                          <span className="text-danger" style={{ fontSize: "12px", marginTop: "4px", display: "block" }}>
+                            {errors.repeatPassword}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -269,6 +317,11 @@ const SignupPage = () => {
                         >
                           I agree to terms &amp; conditions
                         </label>
+                        {errors.agreed && (
+                          <span className="text-danger" style={{ fontSize: "12px", marginTop: "4px", display: "block" }}>
+                            {errors.agreed}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
