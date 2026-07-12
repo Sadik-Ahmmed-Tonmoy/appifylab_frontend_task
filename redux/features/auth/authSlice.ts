@@ -6,13 +6,11 @@ import { RootState } from '../../store';
 type TAuthState = {
   user: null | any;
   access_token: null | string;
-  refresh_token: null | string;
 };
 
 const initialState: TAuthState = {
   user: null,
   access_token: null,
-  refresh_token: null,
 };
 
 const authSlice = createSlice({
@@ -20,16 +18,13 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     setUser: (state, action) => {
-      const { user, access_token, refresh_token } = action.payload;
+      const { user, access_token } = action.payload;
       state.user = user;
       state.access_token = access_token;
-      // state.refresh_token = "its on the server, handled by next-auth";
-      state.refresh_token = refresh_token;
     },
     logout: (state) => {
       state.user = null;
       state.access_token = null;
-      state.refresh_token = null;
     },
   },
 });

@@ -2,7 +2,7 @@
 "use client";
 
 import { logout, setUser } from "@/redux/features/auth/authSlice";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useEffect } from "react";
 import { useAppDispatch } from "../redux/hooks";
 
@@ -12,17 +12,23 @@ export default function AuthSyncWithNextAuth({ children }: { children: React.Rea
 
   useEffect(() => {
     if (status === "authenticated" && session) {
+      if ((session as any).error === "RefreshTokenError") {
+        console.warn("Refresh token invalid – signing out");
+        dispatch(logout());
+        signOut({ callbackUrl: "/auth/login" });
+        return;
+      }
+
       const user = (session as any).user;
       const accessToken = (session as any).accessToken;
-      const refreshToken = (session as any).refreshToken;
-      console.log("accessToken", accessToken);
-      console.log("refreshToken", refreshToken);
+
+      // FIX: removed console.log of accessToken/refreshToken (security leak)
+
       if (user?.id) {
         dispatch(
           setUser({
             user,
             access_token: accessToken,
-            refresh_token: refreshToken,
           })
         );
       } else {

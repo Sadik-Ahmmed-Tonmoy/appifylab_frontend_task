@@ -11,9 +11,11 @@ const LoginPage = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
+    console.log("i am clicked");
     e.preventDefault();
     if (!email || !password) {
       toast.error("Please fill in all fields");
@@ -25,6 +27,7 @@ const LoginPage = () => {
       const res = await signIn('credentials', {
         email,
         password,
+        keepMeLogin: rememberMe,
         redirect: false,
       });
 
@@ -115,8 +118,12 @@ const LoginPage = () => {
                   </div>
                   <div className="row">
                     <div className="col-lg-6 col-xl-6 col-md-6 col-sm-12">
-                      <div className="form-check _social_login_form_check">
-                        <input className="form-check-input _social_login_form_check_input" type="radio" name="flexRadioDefault" id="flexRadioDefault2" defaultChecked />{" "}
+                      <div className="form-check _social_login_form_check" 
+                       onClick={() => {
+                        setRememberMe(!rememberMe);
+                       }}
+                      >
+                        <input className="form-check-input _social_login_form_check_input" type="radio" name="flexRadioDefault" id="flexRadioDefault2" defaultChecked={rememberMe} />{" "}
                         <label className="form-check-label _social_login_form_check_label" htmlFor="flexRadioDefault2">Remember me</label>
                       </div>
                     </div>
