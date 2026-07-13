@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useRef } from "react";
@@ -8,12 +9,14 @@ interface CreatePostProps {
   darkMode: boolean;
   userAvatar?: string;
   onPostCreated?: () => void;
+  onLoadingChange?: (loading: boolean) => void;
 }
 
 export default function CreatePost({
   darkMode,
   userAvatar = "/assets/images/Avatar.png",
   onPostCreated,
+  onLoadingChange,
 }: CreatePostProps) {
   const [text, setText] = useState("");
   const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE">("PUBLIC");
@@ -45,6 +48,7 @@ export default function CreatePost({
       return;
     }
     setLoading(true);
+    onLoadingChange?.(true);
     try {
       const formData = new FormData();
       if (text.trim()) formData.append("text", text.trim());
@@ -67,6 +71,7 @@ export default function CreatePost({
       toast.error(err.message || "An error occurred");
     } finally {
       setLoading(false);
+      onLoadingChange?.(false);
     }
   };
 

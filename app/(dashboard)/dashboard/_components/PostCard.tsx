@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import {
   useTogglePostLikeMutation,
@@ -124,19 +125,29 @@ export default function PostCard({
   onUpdate,
 }: PostCardProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [liked, setLiked] = useState(post.likes.some(l => l.userId === currentUserId));
-  const [likes, setLikes] = useState<Like[]>(post.likes);
-  const [comments, setComments] = useState<Comment[]>(post.comments);
+  // Local overrides for optimistic updates; null means "use prop value"
+  const [localLikes, setLocalLikes] = useState<Like[] | null>(null);
+  const [localComments, setLocalComments] = useState<Comment[] | null>(null);
   const [commentText, setCommentText] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setLiked(post.likes.some(l => l.userId === currentUserId));
-    setLikes(post.likes);
-    setComments(post.comments);
-  }, [post, currentUserId]);
+  // Derive display state from prop (or local override for optimistic updates).
+  // The local override is only used while it still differs from server data;
+  // once the server value catches up the override is simply ignored.
+  const likes = useMemo(
+    () => (localLikes !== null && localLikes !== post.likes ? localLikes : post.likes),
+    [localLikes, post.likes]
+  );
+  const comments = useMemo(
+    () => (localComments !== null && localComments !== post.comments ? localComments : post.comments),
+    [localComments, post.comments]
+  );
+  const liked = useMemo(
+    () => likes.some(l => l.userId === currentUserId),
+    [likes, currentUserId]
+  );
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -154,20 +165,20 @@ export default function PostCard({
 
   // ── Post Like ──
   const handleLikeToggle = async () => {
+    if (!currentUserId) return;
     const wasLiked = liked;
-    // Optimistic update
-    setLiked(!wasLiked);
-    setLikes(prev =>
+    // Optimistic local update
+    setLocalLikes(
       wasLiked
-        ? prev.filter(l => l.userId !== currentUserId)
-        : [...prev, { id: "tmp", userId: currentUserId!, user: { id: currentUserId! } }]
+        ? likes.filter((l) => l.userId !== currentUserId)
+        : [...likes, { id: "tmp", userId: currentUserId, user: { id: currentUserId } }]
     );
     try {
-      await togglePostLike(post.id);
+      // Pass userId so the API slice can patch the cache without a feed refetch
+      await togglePostLike({ postId: post.id, userId: currentUserId });
     } catch {
       // Revert on network error
-      setLiked(wasLiked);
-      setLikes(post.likes);
+      setLocalLikes(post.likes);
     }
   };
 
@@ -182,6 +193,9 @@ export default function PostCard({
         toast.error(res.error.data?.message || "Failed to add comment");
       } else {
         setCommentText("");
+        // Insert the returned comment immediately so it appears without a feed refetch
+        const newComment = res.data?.data ?? res.data;
+        if (newComment) setLocalComments([...comments, newComment]);
       }
     } catch {
       toast.error("Failed to add comment");
@@ -192,20 +206,26 @@ export default function PostCard({
 
   // ── Comment Like ──
   const handleCommentLike = async (commentId: string) => {
-    const isLiked = comments.find(c => c.id === commentId)?.likes.some(l => l.userId === currentUserId);
+    if (!currentUserId) return;
+    const isLiked = comments.find((c) => c.id === commentId)?.likes.some((l) => l.userId === currentUserId);
     // Optimistic update
-    setComments(prev => prev.map(c =>
-      c.id !== commentId ? c : {
-        ...c,
-        likes: isLiked
-          ? c.likes.filter(l => l.userId !== currentUserId)
-          : [...c.likes, { id: "tmp", userId: currentUserId!, user: { id: currentUserId! } }]
-      }
-    ));
+    setLocalComments(
+      comments.map((c) =>
+        c.id !== commentId
+          ? c
+          : {
+              ...c,
+              likes: isLiked
+                ? c.likes.filter((l) => l.userId !== currentUserId)
+                : [...c.likes, { id: "tmp", userId: currentUserId, user: { id: currentUserId } }],
+            }
+      )
+    );
     try {
-      await toggleCommentLike(commentId);
+      // Pass postId + userId so the API slice can patch the cache
+      await toggleCommentLike({ commentId, postId: post.id, userId: currentUserId });
     } catch {
-      setComments(post.comments);
+      setLocalComments(post.comments);
     }
   };
 
@@ -394,7 +414,7 @@ export default function PostCard({
             currentUserAvatar={currentUserAvatar}
             onCommentLike={handleCommentLike}
             onCommentUpdate={(updatedComment) => {
-              setComments(prev => prev.map(c => c.id === updatedComment.id ? updatedComment : c));
+              setLocalComments(comments.map(c => c.id === updatedComment.id ? updatedComment : c));
             }}
           />
         ))}
@@ -466,11 +486,6 @@ function CommentItem({
   const [submittingReply, setSubmittingReply] = useState(false);
   const [replies, setReplies] = useState<Reply[]>(comment.replies || []);
 
-  // Keep replies in sync when parent comment updates
-  useEffect(() => {
-    setReplies(comment.replies || []);
-  }, [comment.replies]);
-
   const isCommentLiked = comment.likes.some(l => l.userId === currentUserId);
 
   const handleReplySubmit = async (e: React.FormEvent) => {
@@ -478,12 +493,19 @@ function CommentItem({
     if (!replyText.trim()) return;
     setSubmittingReply(true);
     try {
-      const res: any = await createReply({ commentId: comment.id, text: replyText.trim() });
+      const res: any = await createReply({
+        commentId: comment.id,
+        postId,
+        text: replyText.trim(),
+      });
       if (res.error) {
         toast.error(res.error.data?.message || "Failed to add reply");
       } else {
         setReplyText("");
         setShowReplyInput(false);
+        // Insert the returned reply immediately so it appears without a feed refetch
+        const newReply = res.data?.data ?? res.data;
+        if (newReply) setReplies((prev) => [...prev, newReply]);
       }
     } catch {
       toast.error("Failed to add reply");
@@ -493,18 +515,24 @@ function CommentItem({
   };
 
   const handleReplyLike = async (replyId: string) => {
-    const isLiked = replies.find(r => r.id === replyId)?.likes.some(l => l.userId === currentUserId);
+    if (!currentUserId) return;
+    const isLiked = replies.find((r) => r.id === replyId)?.likes.some((l) => l.userId === currentUserId);
     // Optimistic update
-    setReplies(prev => prev.map(r =>
-      r.id !== replyId ? r : {
-        ...r,
-        likes: isLiked
-          ? r.likes.filter(l => l.userId !== currentUserId)
-          : [...r.likes, { id: "tmp", userId: currentUserId!, user: { id: currentUserId! } }]
-      }
-    ));
+    setReplies((prev) =>
+      prev.map((r) =>
+        r.id !== replyId
+          ? r
+          : {
+              ...r,
+              likes: isLiked
+                ? r.likes.filter((l) => l.userId !== currentUserId)
+                : [...r.likes, { id: "tmp", userId: currentUserId, user: { id: currentUserId } }],
+            }
+      )
+    );
     try {
-      await toggleReplyLike(replyId);
+      // Pass full context so the API slice can patch the cache
+      await toggleReplyLike({ replyId, commentId: comment.id, postId, userId: currentUserId });
     } catch {
       setReplies(comment.replies || []);
     }
