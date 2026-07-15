@@ -21,17 +21,21 @@ export default function DashboardPage() {
   const [darkMode, setDarkMode] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
 
-  // ── Pagination state ─────────────────────────────────────────────────────
+  // ── Pagination ────────────────────────────────────────────────────────────
   const [page, setPage] = useState(1);
-
-  // ── Ref-based post accumulator (avoids setState inside effect body) ───────
-  const accumulatedPostsRef = useRef<any[]>([]);
   const [allPosts, setAllPosts] = useState<any[]>([]);
 
-  // ── Sentinel ref for IntersectionObserver ────────────────────────────────
+  // Refs that are always up-to-date (no stale-closure risk)
+  const pageRef         = useRef(1);
+  const hasMoreRef      = useRef(true);
+  const isFetchingRef   = useRef(false);
+  const loadedOnceRef   = useRef(false);   // true after first successful response
+  const accumulatedRef  = useRef<any[]>([]); // running list of all posts
+
+  // Sentinel for IntersectionObserver
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // ── RTK Query ────────────────────────────────────────────────────────────
+  // ── RTK Query — one active query at a time ────────────────────────────────
   const {
     data,
     isLoading,
@@ -40,83 +44,95 @@ export default function DashboardPage() {
     refetch,
   } = useGetPostsPaginatedQuery({ page, limit: LIMIT }, { skip: !session });
 
-  const { data: meData } = useGetMeQuery(undefined, {
-    skip: !session,
-  });
+  const { data: meData } = useGetMeQuery(undefined, { skip: !session });
 
-  // ── Accumulate posts on each page response ───────────────────────────────
-  // We update the ref synchronously and only call setAllPosts once per data
-  // change, which avoids the "setState inside effect body" lint warning.
-  // Derive hasMore from the latest query data — no extra state needed.
-  const hasMore = data ? data.meta.page < data.meta.totalPages : true;
+  // Keep refs in sync with latest render values (runs synchronously before effects)
+  isFetchingRef.current = isFetching;
+  if (data) {
+    hasMoreRef.current  = data.meta.page < data.meta.totalPages;
+    loadedOnceRef.current = true;
+  }
+  pageRef.current = page;
 
+  // ── Accumulate posts whenever a new page arrives ──────────────────────────
   useEffect(() => {
     if (!data) return;
+
     const incoming = data.posts ?? [];
 
-    let next: any[];
-    if (page === 1) {
-      // Fresh load or after post creation — replace list
-      next = incoming;
+    if (data.meta.page === 1) {
+      // Reset (fresh load or after post creation)
+      accumulatedRef.current = incoming;
     } else {
-      // Append new page, deduplicate by id
-      const existingIds = new Set(
-        accumulatedPostsRef.current.map((p: any) => p.id),
-      );
-      const unique = incoming.filter((p: any) => !existingIds.has(p.id));
-      next = [...accumulatedPostsRef.current, ...unique];
+      // Append unique posts only
+      const seen = new Set(accumulatedRef.current.map((p: any) => p.id));
+      const fresh = incoming.filter((p: any) => !seen.has(p.id));
+      accumulatedRef.current = [...accumulatedRef.current, ...fresh];
     }
 
-    accumulatedPostsRef.current = next;
-    // Defer the state update so it is not synchronous inside the effect body.
-    const id = setTimeout(() => setAllPosts(next), 0);
-    return () => clearTimeout(id);
-  }, [data, page]);
+    setAllPosts([...accumulatedRef.current]);
+  }, [data]);
 
-  // ── IntersectionObserver: load next page when sentinel is visible ─────────
-  const loadNextPage = useCallback(() => {
-    if (!isFetching && !isLoading && hasMore) {
-      setPage((prev) => prev + 1);
-    }
-  }, [isFetching, isLoading, hasMore]);
+  // ── Core trigger: increment page if guards pass ───────────────────────────
+  const tryLoadNext = useCallback(() => {
+    if (!loadedOnceRef.current) return;   // no data yet
+    if (isFetchingRef.current)   return;   // already in flight
+    if (!hasMoreRef.current)     return;   // no more pages
+    setPage((prev) => {
+      const next = prev + 1;
+      pageRef.current = next;
+      return next;
+    });
+  }, []); // stable — reads only refs, never stale
 
+  // ── IntersectionObserver ──────────────────────────────────────────────────
+  // Re-creates the observer when the list of posts changes.
+  // This ensures the browser performs a fresh intersection check after the DOM
+  // has updated with the new posts. If the sentinel is still visible, it
+  // triggers the next page. If it has been pushed out of view, it stops.
   useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const rootEl = document.querySelector("._layout_middle_wrap");
 
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          loadNextPage();
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          tryLoadNext();
         }
       },
-      { rootMargin: "200px" }, // start fetching 200px before sentinel enters viewport
+      { 
+        root: rootEl, 
+        rootMargin: "1500px", 
+        threshold: 0 
+      },
     );
 
-    observer.observe(sentinel);
+    observer.observe(el);
     return () => observer.disconnect();
-  }, [loadNextPage]);
+  }, [allPosts.length, tryLoadNext]);
 
-  // ── Refetch helper: resets to page 1 and refetches ───────────────────────
+  // ── Refresh helper (used by CreatePost & PostCard) ────────────────────────
   const handleRefetch = useCallback(() => {
-    // Clear the accumulator ref so the effect replaces (not appends) on next
-    // page-1 response — but keep allPosts visible until new data arrives to
-    // avoid a flash of empty content.
-    accumulatedPostsRef.current = [];
+    accumulatedRef.current = [];
+    loadedOnceRef.current  = false;
+    hasMoreRef.current     = true;
     if (page === 1) {
       refetch();
     } else {
       setPage(1);
+      pageRef.current = 1;
     }
   }, [page, refetch]);
 
-  // ── Derived user info ────────────────────────────────────────────────────
+  // ── Derived values ────────────────────────────────────────────────────────
   const error = postsError
     ? (postsError as any).data?.message || "Failed to load posts"
     : null;
 
   const sessionUser = (session as any)?.user;
-  const meUser = (meData as any)?.data?.user ?? (meData as any)?.data;
+  const meUser      = (meData as any)?.data?.user ?? (meData as any)?.data;
 
   const currentUserId = meUser?.id || sessionUser?.id;
   const userName =
@@ -130,9 +146,9 @@ export default function DashboardPage() {
     sessionUser?.avatarUrl ||
     "/assets/images/Avatar.png";
 
-  // ── Determine UI states ───────────────────────────────────────────────────
-  const isInitialLoad = isLoading && page === 1;
-  const isFetchingMore = isFetching && page > 1;
+  const isInitialLoad  = isLoading && !data;
+  const isFetchingMore = isFetching && !!data;
+  const hasMore        = hasMoreRef.current;
 
   return (
     <div
@@ -172,18 +188,17 @@ export default function DashboardPage() {
                       onLoadingChange={setIsPosting}
                     />
 
-                    {/* Skeleton shown while a new post is being submitted */}
+                    {/* Posting skeleton */}
                     {isPosting && (
                       <PostSkeleton darkMode={darkMode} count={1} />
                     )}
 
-                  
-                    {/* Initial loading skeleton */}
+                    {/* Initial load skeleton */}
                     {isInitialLoad && (
                       <PostSkeleton darkMode={darkMode} count={3} />
                     )}
 
-                    {/* Error state */}
+                    {/* Error */}
                     {error && (
                       <div
                         className="_feed_inner_timeline_post_area _b_radious6 _padd_b24 _padd_t24 _mar_b16"
@@ -227,15 +242,15 @@ export default function DashboardPage() {
                       />
                     ))}
 
-                    {/* Fetching-more skeleton (pagination) */}
+                    {/* Loading-more skeleton */}
                     {isFetchingMore && (
                       <PostSkeleton darkMode={darkMode} count={2} />
                     )}
 
-                    {/* Sentinel element – IntersectionObserver watches this */}
+                    {/* Sentinel — IntersectionObserver watches this */}
                     <div ref={sentinelRef} style={{ height: "1px" }} />
 
-                    {/* End-of-feed message */}
+                    {/* End of feed */}
                     {!hasMore && allPosts.length > 0 && !isFetching && (
                       <div
                         style={{
