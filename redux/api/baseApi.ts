@@ -12,7 +12,7 @@ import { setUser, logout } from "../features/auth/authSlice"; // 👈 import
 
 const baseQuery = fetchBaseQuery({
   baseUrl: process.env.NEXT_PUBLIC_API_URL,
-  credentials: "include",
+  // credentials: "include",
   prepareHeaders: (headers, { getState }) => {
     const state = getState() as RootState;
     const token = state.auth.access_token;
