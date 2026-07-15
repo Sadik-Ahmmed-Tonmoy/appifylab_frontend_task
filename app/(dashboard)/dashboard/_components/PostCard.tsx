@@ -294,11 +294,11 @@ export default function PostCard({
           <img src="/assets/images/react_img3.png" alt="Image" className="_react_img _rect_img_mbl_none" />
           <img src="/assets/images/react_img4.png" alt="Image" className="_react_img _rect_img_mbl_none" />
           <img src="/assets/images/react_img5.png" alt="Image" className="_react_img _rect_img_mbl_none" />
-          <p className="_feed_inner_timeline_total_reacts_para" style={{ cursor: "pointer" }}>
+          <div className="_feed_inner_timeline_total_reacts_para" style={{ cursor: "pointer" }}>
             <LikesList likes={likes}>
               <span>{likes.length}</span>
             </LikesList>
-          </p>
+          </div>
         </div>
         <div className="_feed_inner_timeline_total_reacts_txt">
           <p className="_feed_inner_timeline_total_reacts_para1">
