@@ -5590,6 +5590,14 @@
 ._nav_dropdown_link:hover {
     color:var(--color5);
 }
+._nav_drop_info {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+}
 ._nav_drop_info span {
     background: #ebf2ff;
     padding: 11px;

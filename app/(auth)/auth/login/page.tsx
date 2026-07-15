@@ -120,7 +120,7 @@ const LoginPage = () => {
                           className="form-control _social_login_input"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          // required
+                    
                         />
                         {errors.email && (
                           <span className="text-danger" style={{ fontSize: "12px", marginTop: "4px", display: "block" }}>
@@ -137,7 +137,7 @@ const LoginPage = () => {
                           className="form-control _social_login_input"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          // required
+                 
                         />
                         {errors.password && (
                           <span className="text-danger" style={{ fontSize: "12px", marginTop: "4px", display: "block" }}>
